@@ -3,16 +3,14 @@ package apirequest
 import (
 	"encoding/json"
 	"fmt"
-
 	"io/ioutil"
-
 	"net"
 	"net/http"
 	"package/DataBase"
 	"strconv"
-
 	"github.com/gin-gonic/gin"
 )
+
 
 
 func PostUrlPackage(c *gin.Context){
@@ -73,12 +71,9 @@ return true
 }
 
 func MakeRequest(url string)(RequestPrice){
-	resp, _ := http.Get(url)
-
-
-		fmt.Println("url",url)
-
-		body, _ := ioutil.ReadAll(resp.Body)
+	resp, _ :=  http.Get(url)
+	fmt.Println("url",url)
+	body, _ := ioutil.ReadAll(resp.Body)
 
 
 	fmt.Println(string(body))
@@ -101,10 +96,32 @@ func findMaxElement(arr []float64) float64 {
 
 func MaxPrice(arrayurlpackage []DataBase.UrlPackage)(pricemax RequestPrice){
 
-	var arrayprice []float64
-	for _,s := range arrayurlpackage {
-		arrayprice = append(arrayprice,MakeRequest(s.Url).Price)
+	var arrayPrice []float64
+	floatCh := make(chan float64)
+
+    for _,s := range arrayurlpackage {
+	
+		go MakeRequestAsunc(s.Url,floatCh)
+
 	}
-	fmt.Println("max",findMaxElement(arrayprice))
-	return RequestPrice{findMaxElement(arrayprice)}
+	for i := 0; i <len(arrayurlpackage) ; i++{
+        arrayPrice = append(arrayPrice,<-floatCh)
+    }
+
+	fmt.Println("max",findMaxElement(arrayPrice))
+	return RequestPrice{findMaxElement(arrayPrice)}
+}
+
+func MakeRequestAsunc(url string, ch chan<- float64){
+	resp, _ :=  http.Get(url)
+	fmt.Println("url",url)
+	body, _ := ioutil.ReadAll(resp.Body)
+
+
+	fmt.Println(string(body))
+	var price RequestPrice
+
+	json.Unmarshal(body,&price)
+	fmt.Println(price.Price)
+    ch <- price.Price
 }
